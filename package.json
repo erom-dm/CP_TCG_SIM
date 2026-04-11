@@ -1,0 +1,12 @@
+{
+  "name": "cp-tcg-sim",
+  "private": true,
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "dev": "concurrently -n server,client -c cyan,yellow \"npm run dev --workspace=packages/server\" \"npm run dev --workspace=packages/client\"",
+    "build": "npm run build --workspace=packages/shared && npm run build --workspace=packages/server && npm run build --workspace=packages/client"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}
