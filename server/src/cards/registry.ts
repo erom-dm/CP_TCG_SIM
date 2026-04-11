@@ -1,0 +1,85 @@
+import type { Card, Deck, PlayerDeck } from 'shared'
+import { DECK_LEGEND_COUNT, DECK_MAX_SIZE, DECK_MIN_SIZE } from 'shared'
+import { cards } from './data.js'
+
+// ---------------------------------------------------------------------------
+// Lookup map — O(1) access by card id
+// ---------------------------------------------------------------------------
+
+export const cardsById = new Map<string, Card>(
+  cards.map((c) => [c.id, c])
+)
+
+// Fail fast at startup if any id is duplicated
+if (cardsById.size !== cards.length) {
+  throw new Error('Duplicate card id detected in card data.')
+}
+
+// ---------------------------------------------------------------------------
+// Deck validation
+// ---------------------------------------------------------------------------
+
+export interface DeckValidationError {
+  field: 'cards' | 'legends' | 'id'
+  message: string
+}
+
+/**
+ * Validates a PlayerDeck against the pool and deck-building rules.
+ * Returns an empty array when the deck is legal.
+ */
+export function validatePlayerDeck(deck: PlayerDeck): DeckValidationError[] {
+  const errors: DeckValidationError[] = []
+
+  if (deck.cardIds.length < DECK_MIN_SIZE || deck.cardIds.length > DECK_MAX_SIZE) {
+    errors.push({
+      field: 'cards',
+      message: `Deck must contain ${DECK_MIN_SIZE}–${DECK_MAX_SIZE} regular cards (got ${deck.cardIds.length}).`,
+    })
+  }
+
+  if (deck.legendIds.length !== DECK_LEGEND_COUNT) {
+    errors.push({
+      field: 'legends',
+      message: `Deck must contain exactly ${DECK_LEGEND_COUNT} legend cards (got ${deck.legendIds.length}).`,
+    })
+  }
+
+  for (const id of deck.cardIds) {
+    const card = cardsById.get(id)
+    if (!card) {
+      errors.push({ field: 'id', message: `Unknown card id: "${id}".` })
+    } else if (card.type === 'legend') {
+      errors.push({ field: 'cards', message: `Card "${id}" is a legend and cannot be in the regular card slots.` })
+    }
+  }
+
+  for (const id of deck.legendIds) {
+    const card = cardsById.get(id)
+    if (!card) {
+      errors.push({ field: 'id', message: `Unknown card id: "${id}".` })
+    } else if (card.type !== 'legend') {
+      errors.push({ field: 'legends', message: `Card "${id}" is not a legend card.` })
+    }
+  }
+
+  return errors
+}
+
+/**
+ * Resolves a valid PlayerDeck into a full Deck with card objects attached.
+ * Call only after validatePlayerDeck returns no errors.
+ */
+export function resolveDeck(deck: PlayerDeck): Deck {
+  return {
+    name: deck.name,
+    cards: deck.cardIds.map((id) => cardsById.get(id)!),
+    legends: deck.legendIds.map((id) => cardsById.get(id)!) as Deck['legends'],
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Convenience export
+// ---------------------------------------------------------------------------
+
+export { cards }

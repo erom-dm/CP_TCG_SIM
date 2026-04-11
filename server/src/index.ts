@@ -2,14 +2,33 @@ import http from 'http'
 import { WebSocketServer, WebSocket } from 'ws'
 import type { ClientMessage, ServerMessage } from 'shared'
 import { GameRoom } from './GameRoom.js'
+import { cards } from './cards/registry.js'
 
 const PORT = Number(process.env.PORT ?? 3001)
 const NAME_MIN_LENGTH = 4
 
-const httpServer = http.createServer((_req, res) => {
+// ---------------------------------------------------------------------------
+// HTTP server — serves the REST API alongside the WS upgrade
+// ---------------------------------------------------------------------------
+
+const httpServer = http.createServer((req, res) => {
+  // GET /api/cards — full card pool for the client card browser
+  if (req.method === 'GET' && req.url === '/api/cards') {
+    res.writeHead(200, {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+    })
+    res.end(JSON.stringify({ cards }))
+    return
+  }
+
   res.writeHead(200, { 'Content-Type': 'text/plain' })
   res.end('Game server running\n')
 })
+
+// ---------------------------------------------------------------------------
+// WebSocket server
+// ---------------------------------------------------------------------------
 
 const wss = new WebSocketServer({ server: httpServer })
 
@@ -87,6 +106,15 @@ wss.on('connection', (ws: WebSocket) => {
         break
       }
 
+      case 'select_deck': {
+        if (!currentRoom || !playerId) {
+          send(ws, { type: 'error', message: 'Not in a room.' })
+          return
+        }
+        currentRoom.selectDeck(playerId, msg.deck)
+        break
+      }
+
       case 'action': {
         if (currentRoom && playerId) currentRoom.handleAction(playerId, msg.payload)
         break
@@ -114,4 +142,5 @@ wss.on('connection', (ws: WebSocket) => {
 
 httpServer.listen(PORT, () => {
   console.log(`Game server listening on ws://localhost:${PORT}`)
+  console.log(`Card pool API at http://localhost:${PORT}/api/cards`)
 })

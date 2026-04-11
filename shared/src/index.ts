@@ -2,6 +2,8 @@
 // Shared game types — used by both server and client
 // ---------------------------------------------------------------------------
 
+export * from './cards'
+
 export type PlayerId = string
 export type RoomId = string
 
@@ -10,6 +12,8 @@ export interface Player {
   name: string
   /** Seat index: 0 = first to join, 1 = second */
   index: 0 | 1
+  /** True once the player has submitted a valid deck */
+  deckReady: boolean
 }
 
 export interface GameState {
@@ -31,6 +35,7 @@ export interface GameState {
 export type ClientMessage =
   | { type: 'create'; name: string }
   | { type: 'join'; name: string; roomId: RoomId }
+  | { type: 'select_deck'; deck: import('./cards').PlayerDeck }
   | { type: 'action'; payload: GameAction }
 
 /** A game action — extend `kind` and add typed payloads as the game grows */
@@ -42,6 +47,7 @@ export interface GameAction {
 /** Messages sent from the server to the client */
 export type ServerMessage =
   | { type: 'joined'; player: Player; roomId: RoomId }
+  | { type: 'card_pool'; cards: import('./cards').Card[] }
   | { type: 'state_update'; state: GameState }
   | { type: 'error'; message: string }
   | { type: 'game_over'; winner: Player | null }

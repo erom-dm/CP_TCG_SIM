@@ -1,12 +1,15 @@
 import { WebSocket } from 'ws'
 import { randomUUID } from 'crypto'
-import type { GameState, Player, GameAction, ServerMessage } from 'shared'
+import type { Deck, GameState, GameAction, Player, PlayerDeck, ServerMessage } from 'shared'
+import { validatePlayerDeck, resolveDeck } from './cards/registry.js'
 
 export class GameRoom {
   readonly id: string
   private state: GameState
   /** Maps player ID → their WebSocket */
   private sockets = new Map<string, WebSocket>()
+  /** Maps player ID → their resolved deck (set after a valid select_deck message) */
+  private decks = new Map<string, Deck>()
 
   constructor() {
     this.id = randomUUID()
@@ -38,6 +41,7 @@ export class GameRoom {
       id: randomUUID(),
       name,
       index: this.state.players.length as 0 | 1,
+      deckReady: false,
     }
 
     this.state.players.push(player)
@@ -59,6 +63,21 @@ export class GameRoom {
       this.state.status = 'waiting'
       this.log('A player disconnected. Waiting for reconnection...')
     }
+  }
+
+  selectDeck(playerId: string, playerDeck: PlayerDeck): void {
+    const errors = validatePlayerDeck(playerDeck)
+    if (errors.length > 0) {
+      this.sendTo(playerId, { type: 'error', message: errors[0].message })
+      return
+    }
+
+    this.decks.set(playerId, resolveDeck(playerDeck))
+
+    const player = this.state.players.find((p) => p.id === playerId)
+    if (player) player.deckReady = true
+
+    this.broadcastState()
   }
 
   handleAction(playerId: string, action: GameAction): void {
