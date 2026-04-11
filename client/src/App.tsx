@@ -1,19 +1,19 @@
-import { useState } from 'react';
-import GameBoard from './components/GameBoard';
-import { useGameSocket } from './hooks/useGameSocket';
+import { useState } from 'react'
+import GameBoard from './components/GameBoard'
+import { useGameSocket } from './hooks/useGameSocket'
 
 export default function App() {
-  const [nameInput, setNameInput] = useState('');
-  const [playerName, setPlayerName] = useState('');
+  const [nameInput, setNameInput] = useState('')
+  const [playerName, setPlayerName] = useState('')
 
-  const { connected, player, gameState, error, sendAction } = useGameSocket(playerName);
+  const { connected, player, gameState, error, sendAction } = useGameSocket(playerName)
 
   // ── Name entry screen ──
   if (!playerName) {
     const submit = () => {
-      const trimmed = nameInput.trim();
-      if (trimmed) setPlayerName(trimmed);
-    };
+      const trimmed = nameInput.trim()
+      if (trimmed) setPlayerName(trimmed)
+    }
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 120, fontFamily: 'sans-serif', gap: '0.75rem' }}>
@@ -30,12 +30,12 @@ export default function App() {
           Join Game
         </button>
       </div>
-    );
+    )
   }
 
   // ── Loading screens ──
-  if (!connected) return <p style={{ fontFamily: 'sans-serif', padding: '2rem' }}>Connecting…</p>;
-  if (!gameState) return <p style={{ fontFamily: 'sans-serif', padding: '2rem' }}>Waiting for game state…</p>;
+  if (!connected) return <p style={{ fontFamily: 'sans-serif', padding: '2rem' }}>Connecting…</p>
+  if (!gameState) return <p style={{ fontFamily: 'sans-serif', padding: '2rem' }}>Waiting for game state…</p>
 
   // ── Game ──
   return (
@@ -45,5 +45,5 @@ export default function App() {
       onAction={sendAction}
       error={error}
     />
-  );
+  )
 }

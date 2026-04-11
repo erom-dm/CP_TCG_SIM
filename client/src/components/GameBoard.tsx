@@ -1,17 +1,17 @@
-import type { GameAction, GameState } from 'shared';
+import type { GameAction, GameState } from 'shared'
 
 interface Props {
-  gameState: GameState;
-  myPlayerId: string | null;
-  onAction: (action: GameAction) => void;
-  error: string | null;
+  gameState: GameState
+  myPlayerId: string | null
+  onAction: (action: GameAction) => void
+  error: string | null
 }
 
 export default function GameBoard({ gameState, myPlayerId, onAction, error }: Props) {
-  const me = gameState.players.find((p) => p.id === myPlayerId);
-  const opponent = gameState.players.find((p) => p.id !== myPlayerId);
-  const current = gameState.players[gameState.currentPlayerIndex];
-  const isMyTurn = current?.id === myPlayerId;
+  const me = gameState.players.find((p) => p.id === myPlayerId)
+  const opponent = gameState.players.find((p) => p.id !== myPlayerId)
+  const current = gameState.players[gameState.currentPlayerIndex]
+  const isMyTurn = current?.id === myPlayerId
 
   return (
     <div style={{ maxWidth: 640, margin: '0 auto', padding: '1.5rem', fontFamily: 'sans-serif' }}>
@@ -31,7 +31,7 @@ export default function GameBoard({ gameState, myPlayerId, onAction, error }: Pr
       {gameState.status === 'playing' && (
         <section>
           <p>
-            <strong>You:</strong> {me?.name ?? '—'} &nbsp;|&nbsp;
+            <strong>You:</strong> {me?.name ?? '—'} &nbsp;|&nbsp
             <strong>Opponent:</strong> {opponent?.name ?? '—'}
           </p>
           <p style={{ fontSize: '1.1rem' }}>
@@ -75,5 +75,5 @@ export default function GameBoard({ gameState, myPlayerId, onAction, error }: Pr
         </ul>
       </section>
     </div>
-  );
+  )
 }
