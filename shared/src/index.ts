@@ -29,7 +29,8 @@ export interface GameState {
 
 /** Messages sent from the client to the server */
 export type ClientMessage =
-  | { type: 'join'; name: string }
+  | { type: 'create'; name: string }
+  | { type: 'join'; name: string; roomId: RoomId }
   | { type: 'action'; payload: GameAction }
 
 /** A game action — extend `kind` and add typed payloads as the game grows */

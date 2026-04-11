@@ -4,6 +4,7 @@ import type { ClientMessage, ServerMessage } from 'shared'
 import { GameRoom } from './GameRoom.js'
 
 const PORT = Number(process.env.PORT ?? 3001)
+const NAME_MIN_LENGTH = 4
 
 const httpServer = http.createServer((_req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' })
@@ -15,13 +16,13 @@ const wss = new WebSocketServer({ server: httpServer })
 // Active rooms — cleaned up when they become empty
 const rooms = new Map<string, GameRoom>()
 
-function findOrCreateRoom(): GameRoom {
-  for (const room of rooms.values()) {
-    if (!room.isFull()) return room
-  }
-  const room = new GameRoom()
-  rooms.set(room.id, room)
-  return room
+function send(ws: WebSocket, msg: ServerMessage): void {
+  ws.send(JSON.stringify(msg))
+}
+
+function validateName(raw: string): string | null {
+  const name = raw.trim()
+  return name.length >= NAME_MIN_LENGTH ? name : null
 }
 
 wss.on('connection', (ws: WebSocket) => {
@@ -36,19 +37,60 @@ wss.on('connection', (ws: WebSocket) => {
       return
     }
 
-    if (msg.type === 'join') {
-      const room = findOrCreateRoom()
-      const player = room.addPlayer(ws, msg.name.trim() || 'Anonymous')
-      playerId = player.id
-      currentRoom = room
+    switch (msg.type) {
+      case 'create': {
+        const name = validateName(msg.name)
+        if (!name) {
+          send(ws, { type: 'error', message: `Name must be at least ${NAME_MIN_LENGTH} characters.` })
+          return
+        }
 
-      const ack: ServerMessage = { type: 'joined', player, roomId: room.id }
-      ws.send(JSON.stringify(ack))
-      room.broadcastState()
+        const room = new GameRoom()
+        rooms.set(room.id, room)
 
-      console.log(`[room ${room.id.slice(0, 8)}] ${player.name} joined (seat ${player.index})`)
-    } else if (msg.type === 'action' && currentRoom && playerId) {
-      currentRoom.handleAction(playerId, msg.payload)
+        const player = room.addPlayer(ws, name)
+        playerId = player.id
+        currentRoom = room
+
+        send(ws, { type: 'joined', player, roomId: room.id })
+        room.broadcastState()
+
+        console.log(`[room ${room.id.slice(0, 8)}] created by ${name}`)
+        break
+      }
+
+      case 'join': {
+        const name = validateName(msg.name)
+        if (!name) {
+          send(ws, { type: 'error', message: `Name must be at least ${NAME_MIN_LENGTH} characters.` })
+          return
+        }
+
+        const room = rooms.get(msg.roomId)
+        if (!room) {
+          send(ws, { type: 'error', message: 'Room not found.' })
+          return
+        }
+        if (room.isFull()) {
+          send(ws, { type: 'error', message: 'Room is full.' })
+          return
+        }
+
+        const player = room.addPlayer(ws, name)
+        playerId = player.id
+        currentRoom = room
+
+        send(ws, { type: 'joined', player, roomId: room.id })
+        room.broadcastState()
+
+        console.log(`[room ${room.id.slice(0, 8)}] ${name} joined (seat ${player.index})`)
+        break
+      }
+
+      case 'action': {
+        if (currentRoom && playerId) currentRoom.handleAction(playerId, msg.payload)
+        break
+      }
     }
   })
 

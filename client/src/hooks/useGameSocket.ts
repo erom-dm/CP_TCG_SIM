@@ -1,8 +1,12 @@
 /// <reference types="vite/client" />
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { ClientMessage, GameAction, GameState, Player, ServerMessage } from 'shared'
+import type { ClientMessage, GameAction, GameState, Player, RoomId, ServerMessage } from 'shared'
 
 const WS_URL = import.meta.env.DEV ? 'ws://localhost:3001' : `ws://${window.location.host}`
+
+export type Session =
+  | { mode: 'create'; name: string }
+  | { mode: 'join'; name: string; roomId: RoomId }
 
 interface SocketState {
   connected: boolean
@@ -20,21 +24,26 @@ const INITIAL: SocketState = {
 
 /**
  * Manages the WebSocket lifecycle for a single player session.
- * Connects when `playerName` is provided, cleans up on unmount.
+ * Connects when `session` is non-null, cleans up on unmount or session change.
  */
-export function useGameSocket(playerName: string) {
+export function useGameSocket(session: Session | null) {
   const wsRef = useRef<WebSocket | null>(null)
   const [state, setState] = useState<SocketState>(INITIAL)
 
   useEffect(() => {
-    if (!playerName) return
+    if (!session) return
 
     const ws = new WebSocket(WS_URL)
     wsRef.current = ws
 
     ws.onopen = () => {
       setState((s) => ({ ...s, connected: true }))
-      const msg: ClientMessage = { type: 'join', name: playerName }
+
+      const msg: ClientMessage =
+        session.mode === 'create'
+          ? { type: 'create', name: session.name }
+          : { type: 'join', name: session.name, roomId: session.roomId }
+
       ws.send(JSON.stringify(msg))
     }
 
@@ -43,7 +52,7 @@ export function useGameSocket(playerName: string) {
 
       switch (msg.type) {
         case 'joined':
-          setState((s) => ({ ...s, player: msg.player }))
+          setState((s) => ({ ...s, player: msg.player, error: null }))
           break
         case 'state_update':
           setState((s) => ({ ...s, gameState: msg.state, error: null }))
@@ -60,8 +69,11 @@ export function useGameSocket(playerName: string) {
     ws.onclose = () => setState((s) => ({ ...s, connected: false }))
     ws.onerror = () => setState((s) => ({ ...s, error: 'Connection error.' }))
 
-    return () => ws.close()
-  }, [playerName])
+    return () => {
+      ws.close()
+      setState(INITIAL)
+    }
+  }, [session])
 
   const sendAction = useCallback((action: GameAction) => {
     const msg: ClientMessage = { type: 'action', payload: action }
