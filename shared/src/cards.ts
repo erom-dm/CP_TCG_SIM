@@ -1,71 +1,38 @@
 // ---------------------------------------------------------------------------
-// Card types — shared between server (data) and client (deck selection UI)
+// Card types — mirroring the netdeck.gg API shape
 // ---------------------------------------------------------------------------
 
-export type CardType =
-  | 'unit'
-  | 'event'
-  | 'hardware'
-  | 'software'
-  | 'location'
-  | 'legend'
-
-export type CardRarity =
-  | 'common'
-  | 'uncommon'
-  | 'rare'
-  | 'legendary'
-
-export type CardTag =
-  | 'corp'
-  | 'runner'
-  | 'ai'
-  | 'drone'
-  | 'weapon'
-  | 'vehicle'
-  | 'cyber'
-  | 'viral'
-  | 'stealth'
-  | 'breach'
-
-export type AbilityTrigger =
-  | 'on_play'
-  | 'on_attack'
-  | 'on_death'
-  | 'passive'
-  | 'activated'
-
-export interface Ability {
+export interface CardSet {
+  code: string
   name: string
-  description: string
-  trigger: AbilityTrigger
-  /** Intentionally open — shape will evolve with game design */
-  effect: Record<string, unknown>
 }
 
-// ---------------------------------------------------------------------------
-// Card definitions
-// ---------------------------------------------------------------------------
-
 export interface Card {
-  /** Unique string key: "{set}_{serialNumber}" e.g. "alpha_1" */
   id: string
-  /** Numeric part of the id — unique within a set */
-  serialNumber: number
-  /** The release set this card belongs to e.g. "alpha" */
-  set: string
+  external_id: string
   name: string
-  subtitle: string | null
-  type: CardType
-  rarity: CardRarity
-  tags: CardTag[]
-  ram: number
+  subname: string | null
+  display_name: string
+  slug: string
+  rules_text: string
+  flavor_text: string | null
+  set: CardSet
+  rarity: string | null
+  image_url: string
+  source_image_url: string
+  color: string
+  card_type: string
+  is_eddiable: boolean
+  classifications: string[]
+  keywords: string[]
   cost: number
   power: number
-  sellTag: boolean
-  abilities: Ability[]
-  /** Filename served from the server's static/cards/ folder (e.g. "card_001.png") */
-  image: string
+  ram: number
+  artist: string
+  print_number: string
+  printings: unknown[]
+  selected_printing_id: string | null
+  legality: string
 }
 
 // ---------------------------------------------------------------------------
@@ -78,9 +45,9 @@ export interface Card {
  */
 export interface PlayerDeck {
   name: string
-  /** Card IDs in "{set}_{serialNumber}" format, 40–50 entries. Must not include legend-type cards. */
+  /** Card IDs (UUID strings), 40–50 entries. Must not include Legend-type cards. */
   cardIds: string[]
-  /** IDs of exactly 3 cards with type "legend" */
+  /** IDs of exactly 3 cards with card_type "Legend" */
   legendIds: [string, string, string]
 }
 

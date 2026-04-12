@@ -2,7 +2,7 @@ import http from 'http'
 import { WebSocketServer, WebSocket } from 'ws'
 import type { ClientMessage, ServerMessage } from 'shared'
 import { GameRoom } from './GameRoom.js'
-import { cards } from './cards/registry.js'
+import { getCards } from './cards/registry.js'
 
 const PORT = Number(process.env.PORT ?? 3001)
 const NAME_MIN_LENGTH = 4
@@ -14,11 +14,19 @@ const NAME_MIN_LENGTH = 4
 const httpServer = http.createServer((req, res) => {
   // GET /api/cards — full card pool for the client card browser
   if (req.method === 'GET' && req.url === '/api/cards') {
-    res.writeHead(200, {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-    })
-    res.end(JSON.stringify({ cards }))
+    getCards()
+      .then((cards) => {
+        res.writeHead(200, {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        })
+        res.end(JSON.stringify({ cards }))
+      })
+      .catch((err) => {
+        console.error('Failed to fetch cards:', err)
+        res.writeHead(502, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: 'Failed to load card data.' }))
+      })
     return
   }
 

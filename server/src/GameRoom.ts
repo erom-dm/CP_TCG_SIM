@@ -66,18 +66,23 @@ export class GameRoom {
   }
 
   selectDeck(playerId: string, playerDeck: PlayerDeck): void {
-    const errors = validatePlayerDeck(playerDeck)
-    if (errors.length > 0) {
-      this.sendTo(playerId, { type: 'error', message: errors[0].message })
-      return
-    }
-
-    this.decks.set(playerId, resolveDeck(playerDeck))
-
-    const player = this.state.players.find((p) => p.id === playerId)
-    if (player) player.deckReady = true
-
-    this.broadcastState()
+    validatePlayerDeck(playerDeck)
+      .then((errors) => {
+        if (errors.length > 0) {
+          this.sendTo(playerId, { type: 'error', message: errors[0].message })
+          return
+        }
+        return resolveDeck(playerDeck).then((deck) => {
+          this.decks.set(playerId, deck)
+          const player = this.state.players.find((p) => p.id === playerId)
+          if (player) player.deckReady = true
+          this.broadcastState()
+        })
+      })
+      .catch((err) => {
+        console.error('selectDeck error:', err)
+        this.sendTo(playerId, { type: 'error', message: 'Failed to validate deck.' })
+      })
   }
 
   handleAction(playerId: string, action: GameAction): void {

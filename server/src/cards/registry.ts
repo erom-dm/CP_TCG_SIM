@@ -1,18 +1,14 @@
 import type { Card, Deck, PlayerDeck } from 'shared'
 import { DECK_LEGEND_COUNT, DECK_MAX_SIZE, DECK_MIN_SIZE } from 'shared'
-import { cards } from './data.js'
+import { getCards } from './data.js'
 
 // ---------------------------------------------------------------------------
-// Lookup map — O(1) access by card id
+// Lookup map — built lazily from the cached card pool
 // ---------------------------------------------------------------------------
 
-export const cardsById = new Map<string, Card>(
-  cards.map((c) => [c.id, c])
-)
-
-// Fail fast at startup if any id is duplicated
-if (cardsById.size !== cards.length) {
-  throw new Error('Duplicate card id detected in card data.')
+export async function getCardsById(): Promise<Map<string, Card>> {
+  const cards = await getCards()
+  return new Map(cards.map((c) => [c.id, c]))
 }
 
 // ---------------------------------------------------------------------------
@@ -28,8 +24,9 @@ export interface DeckValidationError {
  * Validates a PlayerDeck against the pool and deck-building rules.
  * Returns an empty array when the deck is legal.
  */
-export function validatePlayerDeck(deck: PlayerDeck): DeckValidationError[] {
+export async function validatePlayerDeck(deck: PlayerDeck): Promise<DeckValidationError[]> {
   const errors: DeckValidationError[] = []
+  const cardsById = await getCardsById()
 
   if (deck.cardIds.length < DECK_MIN_SIZE || deck.cardIds.length > DECK_MAX_SIZE) {
     errors.push({
@@ -49,8 +46,8 @@ export function validatePlayerDeck(deck: PlayerDeck): DeckValidationError[] {
     const card = cardsById.get(id)
     if (!card) {
       errors.push({ field: 'id', message: `Unknown card id: "${id}".` })
-    } else if (card.type === 'legend') {
-      errors.push({ field: 'cards', message: `Card "${id}" is a legend and cannot be in the regular card slots.` })
+    } else if (card.card_type.toLowerCase() === 'legend') {
+      errors.push({ field: 'cards', message: `Card "${id}" is a Legend and cannot be in the regular card slots.` })
     }
   }
 
@@ -58,8 +55,8 @@ export function validatePlayerDeck(deck: PlayerDeck): DeckValidationError[] {
     const card = cardsById.get(id)
     if (!card) {
       errors.push({ field: 'id', message: `Unknown card id: "${id}".` })
-    } else if (card.type !== 'legend') {
-      errors.push({ field: 'legends', message: `Card "${id}" is not a legend card.` })
+    } else if (card.card_type.toLowerCase() !== 'legend') {
+      errors.push({ field: 'legends', message: `Card "${id}" is not a Legend card.` })
     }
   }
 
@@ -70,7 +67,8 @@ export function validatePlayerDeck(deck: PlayerDeck): DeckValidationError[] {
  * Resolves a valid PlayerDeck into a full Deck with card objects attached.
  * Call only after validatePlayerDeck returns no errors.
  */
-export function resolveDeck(deck: PlayerDeck): Deck {
+export async function resolveDeck(deck: PlayerDeck): Promise<Deck> {
+  const cardsById = await getCardsById()
   return {
     name: deck.name,
     cards: deck.cardIds.map((id) => cardsById.get(id)!),
@@ -79,7 +77,7 @@ export function resolveDeck(deck: PlayerDeck): Deck {
 }
 
 // ---------------------------------------------------------------------------
-// Convenience export
+// Convenience re-export
 // ---------------------------------------------------------------------------
 
-export { cards }
+export { getCards }
