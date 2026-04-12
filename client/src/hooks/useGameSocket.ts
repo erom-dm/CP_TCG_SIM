@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { ClientMessage, GameAction, GameState, Player, RoomId, ServerMessage } from 'shared'
+import type { ClientMessage, GameAction, GameState, Player, PlayerDeck, RoomId, ServerMessage } from 'shared'
 
 const WS_URL = import.meta.env.DEV ? 'ws://localhost:3001' : `ws://${window.location.host}`
 
@@ -80,5 +80,10 @@ export function useGameSocket(session: Session | null) {
     wsRef.current?.send(JSON.stringify(msg))
   }, [])
 
-  return { ...state, sendAction }
+  const sendDeck = useCallback((deck: PlayerDeck) => {
+    const msg: ClientMessage = { type: 'select_deck', deck }
+    wsRef.current?.send(JSON.stringify(msg))
+  }, [])
+
+  return { ...state, sendAction, sendDeck }
 }

@@ -1,8 +1,9 @@
 import { useState } from 'react'
+import DeckBuilder from './components/DeckBuilder'
 import GameBoard from './components/GameBoard'
 import { useGameSocket, type Session } from './hooks/useGameSocket'
 
-type Screen = 'home' | 'create-form' | 'join-form'
+type Screen = 'home' | 'deck-builder' | 'create-form' | 'join-form'
 
 const NAME_MIN = 4
 
@@ -10,19 +11,35 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('home')
   const [session, setSession] = useState<Session | null>(null)
 
-  const { connected, player, gameState, error, sendAction } = useGameSocket(session)
+  const { connected, player, gameState, error, sendAction, sendDeck } = useGameSocket(session)
 
   // ── Connecting spinner ──
   if (session && !connected && !error) {
     return <Layout><p>Connecting…</p></Layout>
   }
 
-  // ── Waiting for opponent (creator, before second player joins) ──
+  // ── Deck builder — shown while waiting and player hasn't submitted a deck ──
+  if (connected && player && gameState) {
+    const me = gameState.players.find((p) => p.id === player.id)
+    if (gameState.status === 'waiting' && !me?.deckReady) {
+      return (
+        <DeckBuilder
+          roomId={gameState.roomId}
+          onSave={sendDeck}
+          serverError={error ?? undefined}
+        />
+      )
+    }
+  }
+
+  // ── Waiting for opponent (deck submitted, waiting for other player) ──
   if (connected && player && gameState?.status === 'waiting') {
     return (
       <Layout>
-        <h2>Waiting for opponent…</h2>
-        <p style={{ margin: '0.25rem 0 0.75rem' }}>Share this Room ID with your opponent:</p>
+        <h2>Deck submitted!</h2>
+        <p style={{ margin: '0.25rem 0 0.75rem' }}>
+          Waiting for opponent… Share this Room ID:
+        </p>
         <code style={{ fontSize: '1.25rem', letterSpacing: '0.1em', background: '#f0f0f0', padding: '0.4rem 0.8rem', borderRadius: 4 }}>
           {gameState.roomId}
         </code>
@@ -42,6 +59,15 @@ export default function App() {
     )
   }
 
+  // ── Deck builder (standalone, from main menu) ──
+  if (screen === 'deck-builder') {
+    return (
+      <DeckBuilder
+        onBack={() => setScreen('home')}
+      />
+    )
+  }
+
   // ── Home screen ──
   if (screen === 'home') {
     return (
@@ -50,6 +76,7 @@ export default function App() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: 220 }}>
           <button onClick={() => setScreen('create-form')}>Create Game</button>
           <button onClick={() => setScreen('join-form')}>Join Game</button>
+          <button onClick={() => setScreen('deck-builder')}>Deck Builder</button>
         </div>
       </Layout>
     )
