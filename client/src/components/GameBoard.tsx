@@ -443,7 +443,7 @@ export default function GameBoard({ gameState, myPlayerId, onAction, error }: Pr
 
   if (gameState.status === 'waiting') {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 80, color: C.text, fontFamily: 'sans-serif' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 80, color: C.text,  }}>
         Waiting for opponent…
       </div>
     )
@@ -451,7 +451,7 @@ export default function GameBoard({ gameState, myPlayerId, onAction, error }: Pr
 
   if (gameState.status === 'finished') {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 80, color: C.text, fontFamily: 'sans-serif' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 80, color: C.text,  }}>
         {gameState.winner === myPlayerId
           ? 'You win!'
           : `${gameState.players.find((p) => p.id === gameState.winner)?.name ?? 'Opponent'} wins!`}
@@ -470,7 +470,7 @@ export default function GameBoard({ gameState, myPlayerId, onAction, error }: Pr
         padding: 8,
         gap: GAP,
         boxSizing: 'border-box',
-        fontFamily: 'sans-serif',
+        
         overflow: 'hidden',
       }}
     >

@@ -1,12 +1,13 @@
 /// <reference types="vite/client" />
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ClientMessage, GameAction, GameState, Player, PlayerDeck, RoomId, ServerMessage } from 'shared'
+// PlayerDeck is used in the Session type below
 
 const WS_URL = import.meta.env.DEV ? 'ws://localhost:3001' : `ws://${window.location.host}`
 
 export type Session =
-  | { mode: 'create'; name: string }
-  | { mode: 'join'; name: string; roomId: RoomId }
+  | { mode: 'create'; name: string; deck: PlayerDeck }
+  | { mode: 'join'; name: string; roomId: RoomId; deck: PlayerDeck }
 
 interface SocketState {
   connected: boolean
@@ -53,6 +54,7 @@ export function useGameSocket(session: Session | null) {
       switch (msg.type) {
         case 'joined':
           setState((s) => ({ ...s, player: msg.player, error: null }))
+          ws.send(JSON.stringify({ type: 'select_deck', deck: session.deck } satisfies ClientMessage))
           break
         case 'state_update':
           setState((s) => ({ ...s, gameState: msg.state, error: null }))
@@ -80,10 +82,5 @@ export function useGameSocket(session: Session | null) {
     wsRef.current?.send(JSON.stringify(msg))
   }, [])
 
-  const sendDeck = useCallback((deck: PlayerDeck) => {
-    const msg: ClientMessage = { type: 'select_deck', deck }
-    wsRef.current?.send(JSON.stringify(msg))
-  }, [])
-
-  return { ...state, sendAction, sendDeck }
+  return { ...state, sendAction }
 }
